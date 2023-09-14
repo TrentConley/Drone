@@ -14,46 +14,12 @@ eye_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + "haarcascade_eye.xml
 # Create a directory to save the images and labels
 os.makedirs("dataset", exist_ok=True)
 
-
-# Function to handle mouse events
-def draw_rectangle(event, x, y, flags, param):
-    global labels, drawing, start_point
-
-    if event == cv2.EVENT_LBUTTONDOWN:
-        # Start drawing rectangle
-        drawing = True
-        start_point = (x, y)
-
-    elif event == cv2.EVENT_MOUSEMOVE:
-        if drawing:
-            # Update the end point of the rectangle while moving the mouse
-            end_point = (x, y)
-            labels[-1] = (
-                start_point[0],
-                start_point[1],
-                end_point[0] - start_point[0],
-                end_point[1] - start_point[1],
-            )
-
-    elif event == cv2.EVENT_LBUTTONUP:
-        # Stop drawing rectangle
-        drawing = False
-        end_point = (x, y)
-        labels[-1] = (
-            start_point[0],
-            start_point[1],
-            end_point[0] - start_point[0],
-            end_point[1] - start_point[1],
-        )
-
-
-# Create a window and attach the mouse callback function
+# Create a window
 cv2.namedWindow("Face and Eye Detection")
-cv2.setMouseCallback("Face and Eye Detection", draw_rectangle)
 
 frame_count = 0
-drawing = False
-start_point = (0, 0)
+face_eye_dict = {}
+
 while True:
     # Capture frame-by-frame
     ret, frame = cap.read()
@@ -67,7 +33,6 @@ while True:
     # Detect faces
     faces = face_cascade.detectMultiScale(gray, 1.3, 5)
 
-    labels = []
     for x, y, w, h in faces:
         # Draw rectangle around the face
         cv2.rectangle(frame, (x, y), (x + w, y + h), (255, 0, 0), 2)
@@ -78,26 +43,61 @@ while True:
 
         # Detect eyes
         eyes = eye_cascade.detectMultiScale(roi_gray)
+        eye_labels = []
         for ex, ey, ew, eh in eyes:
+            # Adjust eye coordinates
+            ex += x
+            ey += y
             # Draw rectangle around the eyes
-            cv2.rectangle(roi_color, (ex, ey), (ex + ew, ey + eh), (0, 255, 0), 2)
-            labels.append((int(ex), int(ey), int(ew), int(eh)))
+            cv2.rectangle(frame, (ex, ey), (ex + ew, ey + eh), (0, 255, 0), 2)
+            eye_labels.append((int(ex), int(ey), int(ew), int(eh)))
 
-    # Display the frame with face and eye rectangles
-    cv2.imshow("Face and Eye Detection", frame)
+        # Associate eyes with the face
+        face_eye_dict[str((x, y, w, h))] = eye_labels
 
-    # Wait for user to press 'Enter' to save the frame and labels, or 'd' to delete the last rectangle
-    key = cv2.waitKey(0)
-    if key == 13:  # Enter key
-        cv2.imwrite(f"dataset/frame_{frame_count}.png", original_frame)
-        with open(f"dataset/labels_{frame_count}.json", "w") as f:
-            json.dump(labels, f)
-        frame_count += 1
-    elif key == ord("d"):
-        if labels:
-            labels.pop()
+    while True:
+        # Display the frame with face and eye rectangles
+        cv2.imshow("Face and Eye Detection", frame)
 
-    # Press 'q' to quit the application
+        # Wait for user to press 'Enter' to save the frame and labels, or 'd' to delete the last rectangle
+        key = cv2.waitKey(0)
+        if key == 13:  # Enter key
+            cv2.imwrite(f"dataset/frame_{frame_count}.png", original_frame)
+            with open(f"dataset/labels_{frame_count}.json", "w") as f:
+                json.dump(face_eye_dict, f)
+            frame_count += 1
+            break
+        elif key == ord("d"):
+            if face_eye_dict:
+                last_face = list(face_eye_dict.keys())[-1]
+                if face_eye_dict[last_face]:
+                    face_eye_dict[last_face].pop()
+                else:
+                    del face_eye_dict[last_face]
+                frame = original_frame.copy()  # Create a new copy of the original frame
+                for face, eyes in face_eye_dict.items():
+                    face = tuple(map(int, face.strip("()").split(",")))
+                    cv2.rectangle(
+                        frame,
+                        (face[0], face[1]),
+                        (face[0] + face[2], face[1] + face[3]),
+                        (255, 0, 0),
+                        2,
+                    )
+                    for eye in eyes:
+                        cv2.rectangle(
+                            frame,
+                            (eye[0], eye[1]),
+                            (eye[0] + eye[2], eye[1] + eye[3]),
+                            (0, 255, 0),
+                            2,
+                        )
+
+        # Press 'q' to quit the application
+        if key == ord("q"):
+            break
+
+    # If 'q' was pressed, break the outer loop as well
     if key == ord("q"):
         break
 

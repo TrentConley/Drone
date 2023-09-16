@@ -13,6 +13,7 @@ position = "upper_right"
 
 cap = cv2.VideoCapture(0)
 
+index = 0
 while True:
     # load the input image and convert it to grayscale
     _, image = cap.read()
@@ -53,8 +54,9 @@ while True:
         ]
 
         # cv2.imwrite("left_eye.png", leftEyeImage)
-        cv2.imwrite("right_eye.png", rightEyeImage)
-
+        cv2.imwrite(f"dataset/right_eye_{index}_{position}.png", rightEyeImage)
+        index = index + 1
+        cv2.drawContours(image, [rightEyeHull], -1, (0, 255, 0), 1)
         # loop over the (x, y)-coordinates for the facial landmarks
         # and draw them on the image
         # for x, y in shape:

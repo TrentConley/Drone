@@ -8,13 +8,12 @@ import cv2
 p = "shape_predictor_68_face_landmarks.dat"
 detector = dlib.get_frontal_face_detector()
 predictor = dlib.shape_predictor(p)
-position = "upper_right"
+position = "9"
 
 
 cap = cv2.VideoCapture(0)
 
-index = 0
-while True:
+for index in range(0, 100):
     # load the input image and convert it to grayscale
     _, image = cap.read()
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
@@ -54,13 +53,14 @@ while True:
         ]
 
         # cv2.imwrite("left_eye.png", leftEyeImage)
-        cv2.imwrite(f"dataset/right_eye_{index}_{position}.png", rightEyeImage)
-        index = index + 1
+        # cv2.imwrite(f"dataset/right_eye_{index}_{position}.png", rightEyeImage)
+        # print(f"Saved image number {index}.")
+        # TODO Code here to print which eye it is
         cv2.drawContours(image, [rightEyeHull], -1, (0, 255, 0), 1)
         # loop over the (x, y)-coordinates for the facial landmarks
         # and draw them on the image
-        # for x, y in shape:
-        #     cv2.circle(image, (x, y), 2, (0, 255, 0), -1)
+        for x, y in shape:
+            cv2.circle(image, (x, y), 2, (0, 255, 0), -1)
 
     # show the output image with the face detections + facial landmarks
     cv2.imshow("Output", image)

@@ -18,8 +18,14 @@ for position in range(9):  # Assuming 9 positions
     for index in range(1000):  # Assuming 1000 images per position
         img_path = f"dataset/right_eye_{index}_{position}.png"
         if os.path.exists(img_path):
+            transform = transforms.Compose(
+                [
+                    transforms.Resize((64, 64)),  # Resize all images to 64x64
+                    transforms.ToTensor(),  # Convert to tensor and normalize to [0,1]
+                ]
+            )
             img = Image.open(img_path).convert("L")  # Converting to grayscale
-            img = transforms.ToTensor()(img)  # Convert to tensor and normalize to [0,1]
+            img = transform(img)  # Apply the transformations
             image_list.append(img)
             label_list.append(position)
 
@@ -49,15 +55,19 @@ class EyeNet(nn.Module):
         self.bn1 = nn.BatchNorm2d(32)
         self.conv2 = nn.Conv2d(32, 64, 3)
         self.bn2 = nn.BatchNorm2d(64)
-        self.fc1 = nn.Linear(64 * 6 * 6, 128)  # Assuming the image size reduces to 6x6
+        self.fc1 = nn.Linear(64 * 14 * 14, 128)  # Adjusted input size
         self.fc2 = nn.Linear(128, 9)  # 9 classes
 
     def forward(self, x):
         x = nn.LeakyReLU(0.01)(self.bn1(self.conv1(x)))
+        print(f"Shape after conv1: {x.shape}")
         x = nn.MaxPool2d(2)(x)
+        print(f"Shape after pool1: {x.shape}")
         x = nn.LeakyReLU(0.01)(self.bn2(self.conv2(x)))
+        print(f"Shape after conv2: {x.shape}")
         x = nn.MaxPool2d(2)(x)
-        x = x.view(-1, 64 * 6 * 6)
+        print(f"Shape after pool2: {x.shape}")
+        x = x.view(-1, 64 * 14 * 14)
         x = nn.LeakyReLU(0.01)(self.fc1(x))
         x = self.fc2(x)
         return x

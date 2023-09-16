@@ -60,57 +60,52 @@ class EyeNet(nn.Module):
 
     def forward(self, x):
         x = nn.LeakyReLU(0.01)(self.bn1(self.conv1(x)))
-        print(f"Shape after conv1: {x.shape}")
         x = nn.MaxPool2d(2)(x)
-        print(f"Shape after pool1: {x.shape}")
         x = nn.LeakyReLU(0.01)(self.bn2(self.conv2(x)))
-        print(f"Shape after conv2: {x.shape}")
         x = nn.MaxPool2d(2)(x)
-        print(f"Shape after pool2: {x.shape}")
         x = x.view(-1, 64 * 14 * 14)
         x = nn.LeakyReLU(0.01)(self.fc1(x))
         x = self.fc2(x)
         return x
 
 
-# Initialize the model, loss function, and optimizer
-model = EyeNet()
-criterion = nn.CrossEntropyLoss()
-optimizer = optim.Adam(model.parameters(), lr=0.001)
+def train_model():
+    # Initialize the model, loss function, and optimizer
+    model = EyeNet()
+    criterion = nn.CrossEntropyLoss()
+    optimizer = optim.Adam(model.parameters(), lr=0.001)
 
-# Step 5: Model Training
+    # Train the model
+    for epoch in range(10):  # 10 epochs
+        for i, (inputs, labels) in enumerate(train_loader):
+            optimizer.zero_grad()
+            outputs = model(inputs)
+            loss = criterion(outputs, labels)
+            loss.backward()
+            optimizer.step()
+            if i % 10 == 0:
+                print(
+                    f"Epoch [{epoch+1}/10], Step [{i+1}/{len(train_loader)}], Loss: {loss.item():.4f}"
+                )
 
-# Train the model
-for epoch in range(10):  # 10 epochs
-    for i, (inputs, labels) in enumerate(train_loader):
-        optimizer.zero_grad()
-        outputs = model(inputs)
-        loss = criterion(outputs, labels)
-        loss.backward()
-        optimizer.step()
-        if i % 10 == 0:
-            print(
-                f"Epoch [{epoch+1}/10], Step [{i+1}/{len(train_loader)}], Loss: {loss.item():.4f}"
-            )
+    # Evaluate the model
+    model.eval()
+    correct = 0
+    total = 0
 
-# Step 6: Model Evaluation
+    with torch.no_grad():
+        for inputs, labels in test_loader:
+            outputs = model(inputs)
+            _, predicted = torch.max(outputs.data, 1)
+            total += labels.size(0)
+            correct += (predicted == labels).sum().item()
 
-# Evaluate the model
-model.eval()
-correct = 0
-total = 0
+    accuracy = 100 * correct / total
+    print(f"Accuracy: {accuracy}%")
 
-with torch.no_grad():
-    for inputs, labels in test_loader:
-        outputs = model(inputs)
-        _, predicted = torch.max(outputs.data, 1)
-        total += labels.size(0)
-        correct += (predicted == labels).sum().item()
+    # Save the model for future use
+    torch.save(model.state_dict(), "eye_position_model.pth")
 
-accuracy = 100 * correct / total
-print(f"Accuracy: {accuracy}%")
 
-# Step 7: Deployment and Monitoring
-
-# Save the model for future use
-torch.save(model.state_dict(), "eye_position_model.pth")
+if __name__ == "__main__":
+    train_model()

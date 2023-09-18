@@ -24,8 +24,9 @@ detector = dlib.get_frontal_face_detector()
 predictor = dlib.shape_predictor(p)
 
 cap = cv2.VideoCapture(0)
-
-for index in range(0, 100):
+index = -1
+while True:
+    index = index + 1
     # load the input image and convert it to grayscale
     _, image = cap.read()
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)

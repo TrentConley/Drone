@@ -16,7 +16,7 @@ os.makedirs("dataset", exist_ok=True)
 # Create a window
 cv2.namedWindow("Face and Eye Detection")
 
-frame_count = 0
+frame_count = 100
 face_eye_dict = {}
 
 while True:

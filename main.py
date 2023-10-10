@@ -6,6 +6,7 @@ import torch
 from torchvision import transforms
 from PIL import Image
 
+
 from trainer import EyeNet  # Import the EyeNet class
 
 # Initialize the model
@@ -22,9 +23,29 @@ model.eval()
 p = "shape_predictor_68_face_landmarks.dat"
 detector = dlib.get_frontal_face_detector()
 predictor = dlib.shape_predictor(p)
+mapping = {
+    1: "Upper Left",
+    2: "Upper Middle",
+    3: "Upper Right",
+    4: "Middle Left",
+    5: "Middle Middle",
+    6: "Middle Right",
+    7: "Lower Left",
+    8: "Lower Middle",
+    9: "Lower Right",
+}
 
 cap = cv2.VideoCapture(0)
 index = -1
+
+from drone_controller import *
+
+takeoff()
+i = 0
+while True:
+    i = i + 1
+    if i == -1:
+        break
 while True:
     index = index + 1
     # load the input image and convert it to grayscale
@@ -74,8 +95,10 @@ while True:
             _, predicted = torch.max(output.data, 1)
 
         # Print the predicted eye position
-        print(f"The predicted eye position is: {predicted.item()}")
+        position = mapping[predicted.item()]
+        print(f"The predicted eye position is: {position}")
 
+        # execute_movement(position)
         cv2.drawContours(image, [rightEyeHull], -1, (0, 255, 0), 1)
         # loop over the (x, y)-coordinates for the facial landmarks
         # and draw them on the image

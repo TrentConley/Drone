@@ -1,90 +1,72 @@
+# import the necessary packages
+from imutils import face_utils
+import dlib
 import cv2
-import os
-import json
 
-# Initialize webcam
+# initialize dlib's face detector (HOG-based) and then create
+# the facial landmark predictor
+p = "shape_predictor_68_face_landmarks.dat"
+detector = dlib.get_frontal_face_detector()
+predictor = dlib.shape_predictor(p)
+position = "9"
+
+
 cap = cv2.VideoCapture(0)
 
-# Load the pre-trained Haar Cascade classifiers for face
-face_cascade = cv2.CascadeClassifier(
-    cv2.data.haarcascades + "haarcascade_frontalface_default.xml"
-)
+for index in range(100, 300):
+    # load the input image and convert it to grayscale
+    _, image = cap.read()
+    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
 
-# Create a directory to save the images and labels
-os.makedirs("dataset", exist_ok=True)
+    # detect faces in the grayscale image
+    rects = detector(gray, 0)
 
-# Create a window
-cv2.namedWindow("Face and Eye Detection")
+    # loop over the face detections
+    for i, rect in enumerate(rects):
+        # determine the facial landmarks for the face region, then
+        # convert the facial landmark (x, y)-coordinates to a NumPy
+        # array
+        shape = predictor(gray, rect)
+        shape = face_utils.shape_to_np(shape)
 
-frame_count = 100
-face_eye_dict = {}
+        # extract the left and right eye coordinates
+        # leftEye = shape[36:42]
+        rightEye = shape[42:48]
 
-while True:
-    # Capture frame-by-frame
-    ret, frame = cap.read()
+        # compute the bounding box of the eye and then draw it on the image
+        # leftEyeHull = cv2.convexHull(leftEye)
+        rightEyeHull = cv2.convexHull(rightEye)
+        # cv2.drawContours(image, [leftEyeHull], -1, (0, 255, 0), 1)
+        # cv2.drawContours(image, [rightEyeHull], -1, (0, 255, 0), 1)
 
-    # Create a copy of the frame before drawing rectangles
-    original_frame = frame.copy()
+        # extract the eyes from the image and save them
+        # leftEyeRect = cv2.boundingRect(leftEyeHull)
+        rightEyeRect = cv2.boundingRect(rightEyeHull)
 
-    # Convert to grayscale for face detection
-    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+        # leftEyeImage = image[
+        #     leftEyeRect[1] : leftEyeRect[1] + leftEyeRect[3],
+        #     leftEyeRect[0] : leftEyeRect[0] + leftEyeRect[2],
+        # ]
+        rightEyeImage = image[
+            rightEyeRect[1] : rightEyeRect[1] + rightEyeRect[3],
+            rightEyeRect[0] : rightEyeRect[0] + rightEyeRect[2],
+        ]
 
-    # Detect faces
-    faces = face_cascade.detectMultiScale(gray, 1.3, 5)
+        # cv2.imwrite("left_eye.png", leftEyeImage)
+        cv2.imwrite(f"dataset/right_eye_{index}_{position}.png", rightEyeImage)
+        print(f"Saved image number {index}.")
+        # TODO Code here to print which eye it is
+        cv2.drawContours(image, [rightEyeHull], -1, (0, 255, 0), 1)
+        # loop over the (x, y)-coordinates for the facial landmarks
+        # and draw them on the image
+        for x, y in shape:
+            cv2.circle(image, (x, y), 2, (0, 255, 0), -1)
 
-    for x, y, w, h in faces:
-        # Draw rectangle around the face
-        cv2.rectangle(frame, (x, y), (x + w, y + h), (255, 0, 0), 2)
-
-        # Get the region of interest to find eyes
-        roi_color = frame[y : y + h, x : x + w]
-
-        # Convert the ROI to HSV color space
-        hsv_roi = cv2.cvtColor(roi_color, cv2.COLOR_BGR2HSV)
-
-        # Create a mask for white color (common for sclera)
-        lower_white = (0, 0, 200)
-        upper_white = (180, 255, 255)
-        mask = cv2.inRange(hsv_roi, lower_white, upper_white)
-
-        # Find contours in the mask
-        contours, _ = cv2.findContours(mask, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
-
-        eye_labels = []
-        for cnt in contours:
-            ex, ey, ew, eh = cv2.boundingRect(cnt)
-
-            # Ignore small contours that are not likely to be eyes
-            if ew * eh < 100:
-                continue
-
-            # Adjust eye coordinates relative to the whole frame
-            ex, ey = ex + x, ey + y
-
-            # Draw rectangle around the eyes
-            cv2.rectangle(frame, (ex, ey), (ex + ew, ey + eh), (0, 255, 0), 2)
-            eye_labels.append((ex, ey, ew, eh))
-
-        # Associate eyes with the face
-        face_eye_dict[str((x, y, w, h))] = eye_labels
-
-    # Display the frame with face and eye rectangles
-    cv2.imshow("Face and Eye Detection", frame)
-
-    # Wait for user input
-    key = cv2.waitKey(1)
-
-    # Press 'q' to quit the application
-    if key == ord("q"):
+    # show the output image with the face detections + facial landmarks
+    cv2.imshow("Output", image)
+    k = cv2.waitKey(5) & 0xFF
+    if k == 27:
         break
 
-    # Press 's' to save the current frame and labels
-    elif key == ord("s"):
-        cv2.imwrite(f"dataset/frame_{frame_count}.png", original_frame)
-        with open(f"dataset/labels_{frame_count}.json", "w") as f:
-            json.dump(face_eye_dict, f)
-        frame_count += 1
-
-# Release the capture and destroy all OpenCV windows
-cap.release()
 cv2.destroyAllWindows()
+cap.release()

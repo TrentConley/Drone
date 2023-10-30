@@ -38,28 +38,7 @@ mapping = {
 cap = cv2.VideoCapture(0)
 index = -1
 
-from drone_controller import *
-import time
-import threading
-from Tello.tello import *
 
-start()
-print("started")
-start_video()
-takeoff()
-print("taken off")
-
-
-def keep_alive():
-    while True:
-        # Send a no-op command to keep the drone alive
-        send_and_wait("command")
-        time.sleep(5)  # Send every 5 seconds
-
-
-# Start the keep_alive thread
-keep_alive_thread = threading.Thread(target=keep_alive)
-keep_alive_thread.start()
 i = 0
 
 while True:
@@ -113,7 +92,6 @@ while True:
         # Print the predicted eye position
         position = mapping[predicted.item()]
         print(f"The predicted eye position is: {position}")
-        execute_movement(position)
 
         cv2.drawContours(image, [rightEyeHull], -1, (0, 255, 0), 1)
         # loop over the (x, y)-coordinates for the facial landmarks
@@ -126,6 +104,6 @@ while True:
     k = cv2.waitKey(5) & 0xFF
     if k == 27:
         break
-stop_video()
+
 cv2.destroyAllWindows()
 cap.release()

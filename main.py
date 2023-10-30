@@ -5,6 +5,7 @@ import cv2
 import torch
 from torchvision import transforms
 from PIL import Image
+import numpy as np
 
 
 from trainer import EyeNet  # Import the EyeNet class
@@ -38,11 +39,46 @@ mapping = {
 cap = cv2.VideoCapture(0)
 index = -1
 
-draw = False
+
 i = 0
 
-while True:
-    index = index + 1
+
+def detect_headtilt(shape):
+    rightEye = shape[36:42]
+    leftEye = shape[42:48]
+
+    # compute the center of mass for each eye
+    rightEyeCenter = rightEye.mean(axis=0).astype("int")
+    leftEyeCenter = leftEye.mean(axis=0).astype("int")
+
+    # compute the angle between the eye centroids
+    dY = rightEyeCenter[1] - leftEyeCenter[1]
+    dX = rightEyeCenter[0] - leftEyeCenter[0]
+    angle = np.degrees(np.arctan2(dY, dX)) - 180
+
+    print(f"The head tilt angle is: {angle}")
+
+
+def detect_nose_displacement(shape):
+    # extract the nose tip and the left and right edge of the face
+    noseTip = shape[33]
+    leftEdge = shape[0]
+    rightEdge = shape[16]
+
+    # compute the Euclidean distances between the nose tip and the edges of the face
+    distToLeftEdge = np.linalg.norm(noseTip - leftEdge)
+    distToRightEdge = np.linalg.norm(noseTip - rightEdge)
+
+    print(
+        f"The distance from the nose tip to the left edge of the face is: {distToLeftEdge}"
+    )
+    print(
+        f"The distance from the nose tip to the right edge of the face is: {distToRightEdge}"
+    )
+    return (distToLeftEdge, distToRightEdge)
+
+
+def run():
     # load the input image and convert it to grayscale
     _, image = cap.read()
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
@@ -58,53 +94,56 @@ while True:
         shape = predictor(gray, rect)
         shape = face_utils.shape_to_np(shape)
 
-        # extract the right eye coordinates
-        rightEye = shape[42:48]
+        # detect_headtilt(shape)
+        return detect_nose_displacement(shape)
 
-        # compute the bounding box of the eye and then draw it on the image
-        rightEyeHull = cv2.convexHull(rightEye)
+        # # extract the right eye coordinates
+        # rightEye = shape[42:48]
 
-        # extract the eyes from the image and save them
-        rightEyeRect = cv2.boundingRect(rightEyeHull)
+        # # compute the bounding box of the eye and then draw it on the image
+        # rightEyeHull = cv2.convexHull(rightEye)
 
-        rightEyeImage = image[
-            rightEyeRect[1] : rightEyeRect[1] + rightEyeRect[3],
-            rightEyeRect[0] : rightEyeRect[0] + rightEyeRect[2],
-        ]
+        # # extract the eyes from the image and save them
+        # rightEyeRect = cv2.boundingRect(rightEyeHull)
 
-        # Preprocess the eye image and prepare it for prediction
-        rightEyeImage = Image.fromarray(cv2.cvtColor(rightEyeImage, cv2.COLOR_BGR2RGB))
-        # Convert to grayscale
-        rightEyeImage = rightEyeImage.convert("L")
-        transform = transforms.Compose(
-            [
-                transforms.Resize((64, 64)),  # Resize all images to 64x64
-                transforms.ToTensor(),  # Convert to tensor and normalize to [0,1]
-            ]
-        )
-        rightEyeImage = transform(rightEyeImage).unsqueeze(0)
+        # rightEyeImage = image[
+        #     rightEyeRect[1] : rightEyeRect[1] + rightEyeRect[3],
+        #     rightEyeRect[0] : rightEyeRect[0] + rightEyeRect[2],
+        # ]
 
-        # Predict the eye position
-        with torch.no_grad():
-            output = model(rightEyeImage)
-            _, predicted = torch.max(output.data, 1)
+        # # Preprocess the eye image and prepare it for prediction
+        # rightEyeImage = Image.fromarray(cv2.cvtColor(rightEyeImage, cv2.COLOR_BGR2RGB))
+        # # Convert to grayscale
+        # rightEyeImage = rightEyeImage.convert("L")
+        # transform = transforms.Compose(
+        #     [
+        #         transforms.Resize((64, 64)),  # Resize all images to 64x64
+        #         transforms.ToTensor(),  # Convert to tensor and normalize to [0,1]
+        #     ]
+        # )
+        # rightEyeImage = transform(rightEyeImage).unsqueeze(0)
 
-        # Print the predicted eye position
-        position = mapping[predicted.item()]
-        print(f"The predicted eye position is: {position}")
-        # integrate with controls here.
-        if draw:
-            cv2.drawContours(image, [rightEyeHull], -1, (0, 255, 0), 1)
-            # loop over the (x, y)-coordinates for the facial landmarks
-            # and draw them on the image
-            for x, y in shape:
-                cv2.circle(image, (x, y), 2, (0, 255, 0), -1)
-    if draw:
-        # show the output image with the face detections + facial landmarks
-        cv2.imshow("Output", image)
-    k = cv2.waitKey(5) & 0xFF
-    if k == 27:
-        break
+        # # Predict the eye position
+        # with torch.no_grad():
+        #     output = model(rightEyeImage)
+        #     _, predicted = torch.max(output.data, 1)
 
-cv2.destroyAllWindows()
-cap.release()
+        # # Print the predicted eye position
+        # position = mapping[predicted.item()]
+        # # print(f"The predicted eye position is: {position}")
+
+        # cv2.drawContours(image, [rightEyeHull], -1, (0, 255, 0), 1)
+        # # loop over the (x, y)-coordinates for the facial landmarks
+        # # and draw them on the image
+        # for x, y in shape:
+        #     cv2.circle(image, (x, y), 2, (0, 255, 0), -1)
+
+    # show the output image with the face detections + facial landmarks
+    # cv2.imshow("Output", image)
+    # k = cv2.waitKey(5) & 0xFF
+    # if k == 27:
+    #     break
+
+
+# while True:
+#     run()

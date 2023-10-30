@@ -2,6 +2,7 @@ from djitellopy import tello
 import keypad_module as km
 from time import sleep
 import cv2
+from main import run
 
 km.init()
 
@@ -56,6 +57,15 @@ drone.streamon()
 
 while True:
     val = getImput()
+    result = run()
+    if result is not None:
+        left, right = result
+    else:
+        left, right = 200, 200  # or any other default values
+    if left < 120:
+        val[3] = 80
+    elif right < 120:
+        val[3] = -80
     drone.send_rc_control(val[0], val[1], val[2], val[3])
     sleep(0.05)
     frame = drone.get_frame_read().frame

@@ -1,35 +1,64 @@
-from Tello.tello import *
-import threading
-import queue
+from djitellopy import tello
+import keypad_module as km
+from time import sleep
+import cv2
 
-# Create a queue to hold the movements
-movement_queue = queue.Queue()
+km.init()
 
-
-def execute_movement(position):
-    # Add the movement to the queue
-    movement_queue.put(position)
-
-
-def perform_movement():
-    while True:
-        # Get the next movement from the queue
-        movement = movement_queue.get()
-        print(f"Processing movement: {movement}")
-        words = movement.split()
-        if words[0] == "Upper":
-            up(20)
-        elif words[0] == "Lower":
-            down(20)
-
-        if words[1] == "Left":
-            anticlockwise(90)
-        elif words[1] == "Right":
-            clockwise(90)
-        # Mark the task as done
-        movement_queue.task_done()
+drone = tello.Tello()
+drone.connect()
+print(drone.get_battery())
 
 
-# Start a thread to process movements
-movement_thread = threading.Thread(target=perform_movement)
-movement_thread.start()
+def getImput():
+    # drone.takeoff()
+    lr, fb, ud, yv = 0, 0, 0, 0
+    speed = 80
+
+    if km.getKeys("a"):
+        lr = -speed
+        print("LEFT KEY PRESSED...")
+    elif km.getKeys("d"):
+        lr = speed
+        print("RIGHT KEY PRESSED...")
+
+    if km.getKeys("w"):
+        fb = speed
+        print("UP KEY PRESSED...")
+    elif km.getKeys("s"):
+        fb = -speed
+        print("DOWN KEY PRESSED...")
+
+    if km.getKeys("UP"):
+        ud = speed
+        print("W KEY PRESSED...")
+    elif km.getKeys("DOWN"):
+        ud = -speed
+        print("S KEY PRESSED...")
+
+    if km.getKeys("LEFT"):
+        yv = speed
+        print("A KEY PRESSED...")
+    elif km.getKeys("RIGHT"):
+        yv = -speed
+        print("D KEY PRESSED...")
+    if km.getKeys("q"):
+        drone.land()
+        print("Q KEY PRESSED...")
+    elif km.getKeys("r"):
+        drone.takeoff()
+        print("R KEY PRESSED...")
+
+    return [lr, fb, ud, yv]
+
+
+drone.streamon()
+
+while True:
+    val = getImput()
+    drone.send_rc_control(val[0], val[1], val[2], val[3])
+    sleep(0.05)
+    frame = drone.get_frame_read().frame
+    cv2.imshow("Frame", frame)
+
+    # code for reading eye position

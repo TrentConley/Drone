@@ -38,7 +38,7 @@ mapping = {
 cap = cv2.VideoCapture(0)
 index = -1
 
-
+draw = False
 i = 0
 
 while True:
@@ -92,15 +92,16 @@ while True:
         # Print the predicted eye position
         position = mapping[predicted.item()]
         print(f"The predicted eye position is: {position}")
-
-        cv2.drawContours(image, [rightEyeHull], -1, (0, 255, 0), 1)
-        # loop over the (x, y)-coordinates for the facial landmarks
-        # and draw them on the image
-        for x, y in shape:
-            cv2.circle(image, (x, y), 2, (0, 255, 0), -1)
-
-    # show the output image with the face detections + facial landmarks
-    cv2.imshow("Output", image)
+        # integrate with controls here.
+        if draw:
+            cv2.drawContours(image, [rightEyeHull], -1, (0, 255, 0), 1)
+            # loop over the (x, y)-coordinates for the facial landmarks
+            # and draw them on the image
+            for x, y in shape:
+                cv2.circle(image, (x, y), 2, (0, 255, 0), -1)
+    if draw:
+        # show the output image with the face detections + facial landmarks
+        cv2.imshow("Output", image)
     k = cv2.waitKey(5) & 0xFF
     if k == 27:
         break

@@ -65,14 +65,6 @@ Run `eye_labeler.py` to label eye positions in real-time. This will save frames 
 python eye_labeler.py
 \```
 
-### Alternative Eye and Face Detection
-
-Run `claude.py` for an alternative method of eye and face detection using dlib.
-
-\```bash
-python claude.py
-\```
-
 ## Contributing
 
 Feel free to fork this repository, create a new branch, and submit a pull request.
@@ -80,4 +72,3 @@ Feel free to fork this repository, create a new branch, and submit a pull reques
 ## License
 
 This project is licensed under the MIT License.
-

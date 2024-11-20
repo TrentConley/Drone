@@ -3,3 +3,4 @@ venv/
 .vscode
 dataset
 *.dat
+.DS_Store.DS_Store
